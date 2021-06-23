@@ -30,10 +30,8 @@ add_executable(mono_camera_node
   src/frame_observer.cpp
 )
 
-target_include_directories(mono_camera_NODE
+target_include_directories(mono_camera_node
   PRIVATE include)
-
-add_dependencies_and_linkings(mono_camera_node)
 
 ament_target_dependencies(mono_camera_node
   "rclcpp"
@@ -51,11 +49,6 @@ install(TARGETS mono_camera_node
   ARCHIVE DESTINATION lib
   LIBRARY DESTINATION lib
   RUNTIME DESTINATION lib/${PROJECT_NAME}
-)
-
-# Install launch files.
-install(DIRECTORY launch
-  DESTINATION share/${PROJECT_NAME}
 )
 
 ament_package()

@@ -18,7 +18,9 @@ location must be specified with variable `VIMBA_DIR`.
 
 Once you have installed the SDK and a recent version of ROS 2 (Foxy or later),
 you can clone the required repositories and build them in a workspace like
-any other ROS 2 package:
+any other ROS 2 package. Note that you will also make sure to have the packages
+from the [ros-perception/image_common](https://github.com/ros-perception/image_common)
+repository.
 
 ```sh
 # Create a workspace directory
@@ -28,6 +30,9 @@ cd ws-avt-cameras
 # Clone the required repositories (alternatively, you may also use vcs, see below)
 git clone https://github.com/asorbini/vimba_sdk_vendor.git
 git clone https://github.com/asorbini/ros2_avt_camera_drivers.git
+
+# Make sure image_common packages are installed (e.g. for Foxy)
+sudo apt-get install -y ros-foxy-image-common
 
 # Load ROS 2 (e.g. Foxy)
 source /opt/ros/foxy/setup.bash
@@ -46,7 +51,7 @@ to clone all required repositories using `vcs`:
 mkdir ws-avt-cameras
 cd ws-avt-cameras
 
-vcs import . < https://github.com/asorbini/ros2_avt_camera_drivers/blob/main/avt_camera_drivers.repos
+curl https://raw.githubusercontent.com/asorbini/ros2_avt_camera_drivers/main/avt_camera_drivers.repos | vcs import .
 ```
 
 ## Running the driver
