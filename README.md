@@ -1,4 +1,4 @@
-# ROS 2 drivers for Allied Vision Technologies cameras
+# ROS 2 drivers for cameras by Allied Vision Technologies
 
 This repo contains a ROS2 driver for cameras manufactured by [Allied Vision Technologies](https://www.alliedvision.com).  
 
