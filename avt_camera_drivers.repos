@@ -4,7 +4,7 @@ repositories:
     url: https://github.com/asorbini/vimba_sdk_vendor.git
     version: main
   
-  avt/ros2_luminar_drivers:
+  avt/ros2_avt_camera_drivers:
     type: git
     url: https://github.com/asorbini/ros2_avt_camera_drivers.git
     version: main
