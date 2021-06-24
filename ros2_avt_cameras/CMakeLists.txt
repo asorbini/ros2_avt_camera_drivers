@@ -54,6 +54,10 @@ install(
   LIBRARY DESTINATION lib
   RUNTIME DESTINATION bin
 )
+install(
+  DIRECTORY include/
+  DESTINATION include
+)
 
 add_executable(mono_camera_node
   src/nodes/mono_camera_node.cpp
