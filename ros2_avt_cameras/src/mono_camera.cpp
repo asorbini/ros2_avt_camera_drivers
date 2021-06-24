@@ -36,164 +36,157 @@
 
 namespace avt_vimba_camera {
 
-MonoCamera::MonoCamera(const std::string & node_name, const rclcpp::NodeOptions &node_options)
+BaseMonoCamera::BaseMonoCamera(const std::string & node_name, const rclcpp::NodeOptions &node_options)
 : Node(node_name, node_options)
 {
-    // node handle sharing (for logging)
-    node_handle_ = rclcpp::Node::SharedPtr(this);
-    cam_.node_handle_ = this->node_handle_;
-    api_.node_handle_ = this->node_handle_;
+  // node handle sharing (for logging)
+  node_handle_ = rclcpp::Node::SharedPtr(this);
+  cam_.node_handle_ = this->node_handle_;
+  api_.node_handle_ = this->node_handle_;
 
-    // Start Vimba & list all available cameras
-    api_.start();
+  // Start Vimba & list all available cameras
+  api_.start();
 
-    // set up config from parms
-  	frame_id_descriptor.description = "The optical camera TF frame set in message headers.";
-  	this->declare_parameter("frame_id", rclcpp::ParameterValue("camera"), frame_id_descriptor);
-  	camera_ip_addr_descriptor.description = "The IP address for the camera.";
-  	this->declare_parameter("camera_ip_addr", rclcpp::ParameterValue("10.0.0.1"), camera_ip_addr_descriptor);
-  	trig_timestamp_topic_descriptor.description = "Sets the topic from which an externally trigged camera receives its trigger timestamps.";
-  	this->declare_parameter("trig_timestamp_topic", rclcpp::ParameterValue(""), trig_timestamp_topic_descriptor);
-  	acquisition_mode_descriptor.description = "Camera acquisition mode";
-  	this->declare_parameter("acquisition_mode", rclcpp::ParameterValue("Continuous"), acquisition_mode_descriptor);
-  	acquisition_rate_descriptor.description = "Sets the expected triggering rate in externally triggered mode.";
-  	this->declare_parameter("acquisition_rate", rclcpp::ParameterValue(30), acquisition_rate_descriptor);
-  	trigger_source_descriptor.description = "Camera trigger source";
-  	this->declare_parameter("trigger_source", rclcpp::ParameterValue("FixedRate"), trigger_source_descriptor);
-  	trigger_mode_descriptor.description = "Camera trigger mode";
-  	this->declare_parameter("trigger_mode", rclcpp::ParameterValue("On"), trigger_mode_descriptor);
-  	trigger_selector_descriptor.description = "Camera trigger selector";
-  	this->declare_parameter("trigger_selector", rclcpp::ParameterValue("FrameStart"), trigger_selector_descriptor);
-  	trigger_activation_descriptor.description = "Camera trigger activation";
-  	this->declare_parameter("trigger_activation", rclcpp::ParameterValue("RisingEdge"), trigger_activation_descriptor);
-  	trigger_delay_descriptor.description = "Trigger delay in us (only valid when set to external trigger)";
-  	this->declare_parameter("trigger_delay", rclcpp::ParameterValue(0.0), trigger_delay_descriptor);
-  	exposure_descriptor.description = "Camera exposure time in microseconds.";
-  	this->declare_parameter("exposure", rclcpp::ParameterValue(50000), exposure_descriptor);
-  	exposure_auto_descriptor.description = "Sets the camera exposure. If continously automatic, causes the `~exposure` setting to be ignored.";
-  	this->declare_parameter("exposure_auto", rclcpp::ParameterValue("Continuous"), exposure_auto_descriptor);
-  	exposure_auto_alg_descriptor.description = "The following algorithms can be used to calculate auto exposure";
-  	this->declare_parameter("exposure_auto_alg", rclcpp::ParameterValue("FitRange"), exposure_auto_alg_descriptor);
-  	exposure_auto_tol_descriptor.description = "Tolerance in variation from ExposureAutoTarget in which the auto exposure algorithm will not respond.";
-  	this->declare_parameter("exposure_auto_tol", rclcpp::ParameterValue(5), exposure_auto_tol_descriptor);
-  	exposure_auto_max_descriptor.description = "he max exposure time in auto exposure mode, in microseconds.";
-  	this->declare_parameter("exposure_auto_max", rclcpp::ParameterValue(50000), exposure_auto_max_descriptor);
-  	exposure_auto_min_descriptor.description = "The min exposure time in auto exposure mode, in microseconds.";
-  	this->declare_parameter("exposure_auto_min", rclcpp::ParameterValue(41), exposure_auto_min_descriptor);
-  	exposure_auto_outliers_descriptor.description = "The total pixels from top of the distribution that are ignored by the auto exposure algorithm (0.01% increments)";
-  	this->declare_parameter("exposure_auto_outliers", rclcpp::ParameterValue(0), exposure_auto_outliers_descriptor);
-  	exposure_auto_rate_descriptor.description = "The rate at which the auto exposure function changes the exposure setting.100% is auto exposure adjustments running at full speed, and 50% is half speed.";
-  	this->declare_parameter("exposure_auto_rate", rclcpp::ParameterValue(100), exposure_auto_rate_descriptor);
-  	exposure_auto_target_descriptor.description = "The auto exposure target mean value as a percentage, from 0=black to 100=white.";
-  	this->declare_parameter("exposure_auto_target", rclcpp::ParameterValue(50), exposure_auto_target_descriptor);
-  	gain_descriptor.description = "The gain level in dB.";
-  	this->declare_parameter("gain", rclcpp::ParameterValue(0), gain_descriptor);
-  	gain_auto_descriptor.description = "Sets the analog gain. If continously automatic, causes the `~gain` setting to be ignored.";
-  	this->declare_parameter("gain_auto", rclcpp::ParameterValue("Continuous"), gain_auto_descriptor);
-  	gain_auto_tol_descriptor.description = "Tolerance in variation from GainAutoTarget in which the auto exposure algorithm will not respond.";
-  	this->declare_parameter("gain_auto_tol", rclcpp::ParameterValue(5), gain_auto_tol_descriptor);
-  	gain_auto_max_descriptor.description = "The max gain level in auto gain mode, in dB.";
-  	this->declare_parameter("gain_auto_max", rclcpp::ParameterValue(32), gain_auto_max_descriptor);
-  	gain_auto_min_descriptor.description = "The min gain level in auto gain mode, in dB.";
-  	this->declare_parameter("gain_auto_min", rclcpp::ParameterValue(0), gain_auto_min_descriptor);
-  	gain_auto_outliers_descriptor.description = "The total pixels from top of the distribution that are ignored by the auto gain algorithm (0.01% increments).";
-  	this->declare_parameter("gain_auto_outliers", rclcpp::ParameterValue(0), gain_auto_outliers_descriptor);
-  	gain_auto_rate_descriptor.description = "The rate percentage at which the auto gain function changes.";
-  	this->declare_parameter("gain_auto_rate", rclcpp::ParameterValue(100), gain_auto_rate_descriptor);
-  	gain_auto_target_descriptor.description = "The general lightness or darkness of the auto gain feature. A percentage of maximum brightness.";
-  	this->declare_parameter("gain_auto_target", rclcpp::ParameterValue(50), gain_auto_target_descriptor);
-  	balance_ratio_abs_descriptor.description = "Adjusts the gain of the channel selected in the `~BalanceRatioSelector`";
-  	this->declare_parameter("balance_ratio_abs", rclcpp::ParameterValue(1.0), balance_ratio_abs_descriptor);
-  	balance_ratio_selector_descriptor.description = "Select the Red or Blue channel to adjust with `~BalanceRatioAbs`";
-  	this->declare_parameter("balance_ratio_selector", rclcpp::ParameterValue("Red"), balance_ratio_selector_descriptor);
-  	whitebalance_auto_descriptor.description = "Whether whitebalance will continuously adjust to the current scene. Causes the `~whitebalance_red` and `~whitebalance_blue` settings to be ignored.";
-  	this->declare_parameter("whitebalance_auto", rclcpp::ParameterValue("Continuous"), whitebalance_auto_descriptor);
-  	whitebalance_auto_tol_descriptor.description = "Tolerance allowed from the ideal white balance values";
-  	this->declare_parameter("whitebalance_auto_tol", rclcpp::ParameterValue(5), whitebalance_auto_tol_descriptor);
-  	whitebalance_auto_rate_descriptor.description = "Rate of white balance adjustments, from 1 (slowest) to 100 (fastest).";
-  	this->declare_parameter("whitebalance_auto_rate", rclcpp::ParameterValue(100), whitebalance_auto_rate_descriptor);
-  	binning_x_descriptor.description = "Number of pixels to bin together horizontally.";
-  	this->declare_parameter("binning_x", rclcpp::ParameterValue(1), binning_x_descriptor);
-  	binning_y_descriptor.description = "Number of pixels to bin together vertically.";
-  	this->declare_parameter("binning_y", rclcpp::ParameterValue(1), binning_y_descriptor);
-  	decimation_x_descriptor.description = "Number of decimation operations in x.";
-  	this->declare_parameter("decimation_x", rclcpp::ParameterValue(1), decimation_x_descriptor);
-  	decimation_y_descriptor.description = "Number of decimation operations in y.";
-  	this->declare_parameter("decimation_y", rclcpp::ParameterValue(1), decimation_y_descriptor);
-  	width_descriptor.description = "Width of the region of interest (0 for automatic).";
-  	this->declare_parameter("width", rclcpp::ParameterValue(4096), width_descriptor);
-  	height_descriptor.description = "Height of the region of interest (0 for automatic).";
-  	this->declare_parameter("height", rclcpp::ParameterValue(4096), height_descriptor);
-  	roi_width_descriptor.description = "X width of the region of interest.";
-  	this->declare_parameter("roi_width", rclcpp::ParameterValue(0), roi_width_descriptor);
-  	roi_height_descriptor.description = "Y height of the region of interest.";
-  	this->declare_parameter("roi_height", rclcpp::ParameterValue(0), roi_height_descriptor);
-  	roi_offset_x_descriptor.description = "X offset of the region of interest.";
-  	this->declare_parameter("roi_offset_x", rclcpp::ParameterValue(0), roi_offset_x_descriptor);
-  	roi_offset_y_descriptor.description = "Y offset of the region of interest.";
-  	this->declare_parameter("roi_offset_y", rclcpp::ParameterValue(0), roi_offset_y_descriptor);
-  	pixel_format_descriptor.description = "Format of the image data.";
-  	this->declare_parameter("pixel_format", rclcpp::ParameterValue("Mono8"), pixel_format_descriptor);
-  	stream_bytes_per_second_descriptor.description = "Limits the data rate of the camera.";
-  	this->declare_parameter("stream_bytes_per_second", rclcpp::ParameterValue(45000000), stream_bytes_per_second_descriptor);
-  	ptp_mode_descriptor.description = "Controls the PTP behavior of the clock port.";
-  	this->declare_parameter("ptp_mode", rclcpp::ParameterValue("Off"), ptp_mode_descriptor);
-  	sync_in_selector_descriptor.description = "Selects the sync-out line to control";
-  	this->declare_parameter("sync_in_selector", rclcpp::ParameterValue("SyncIn1"), sync_in_selector_descriptor);
-  	sync_out_polarity_descriptor.description = "Polarity applied to the sync-out line specified by `sync_out_selector`";
-  	this->declare_parameter("sync_out_polarity", rclcpp::ParameterValue("Normal"), sync_out_polarity_descriptor);
-  	sync_out_selector_descriptor.description = "Selects the sync-out line to control";
-  	this->declare_parameter("sync_out_selector", rclcpp::ParameterValue("SyncOut1"), sync_out_selector_descriptor);
-  	sync_out_source_descriptor.description = "Signal source of the sync-out line specified by `sync_out_selector`";
-  	this->declare_parameter("sync_out_source", rclcpp::ParameterValue("GPO"), sync_out_source_descriptor);
-  	iris_auto_target_descriptor.description = "This is the target image mean value, in percent.";
-  	this->declare_parameter("iris_auto_target", rclcpp::ParameterValue(50), iris_auto_target_descriptor);
-  	iris_mode_descriptor.description = "Set the iris mode. Disabled: no iris control. Video: enable video iris. VideoOpen: fully open a video iris. VideoClose: fully close a video iris.";
-  	this->declare_parameter("iris_mode", rclcpp::ParameterValue("Continuous"), iris_mode_descriptor);
-  	iris_video_level_min_descriptor.description = "Minimum video iris level output by the camera, in approximately mV pp. A higher minimum value slows the adjustment time but prevents excessive overshoot.";
-  	this->declare_parameter("iris_video_level_min", rclcpp::ParameterValue(110), iris_video_level_min_descriptor);
-  	iris_video_level_max_descriptor.description = "Maximum video iris level output by the camera, in approximately mV pp. A lower minimum value slows the adjustment time but prevents excessive overshoot.";
-  	this->declare_parameter("iris_video_level_max", rclcpp::ParameterValue(110), iris_video_level_max_descriptor);
-    // callback for parms
-    this->set_on_parameters_set_callback(
-      std::bind(&MonoCamera::parametersCallback, this, std::placeholders::_1)
-    );
+  // set up config from parms
+  frame_id_descriptor.description = "The optical camera TF frame set in message headers.";
+  this->declare_parameter("frame_id", rclcpp::ParameterValue("camera"), frame_id_descriptor);
+  camera_ip_addr_descriptor.description = "The IP address for the camera.";
+  this->declare_parameter("camera_ip_addr", rclcpp::ParameterValue("10.0.0.1"), camera_ip_addr_descriptor);
+  trig_timestamp_topic_descriptor.description = "Sets the topic from which an externally trigged camera receives its trigger timestamps.";
+  this->declare_parameter("trig_timestamp_topic", rclcpp::ParameterValue(""), trig_timestamp_topic_descriptor);
+  acquisition_mode_descriptor.description = "Camera acquisition mode";
+  this->declare_parameter("acquisition_mode", rclcpp::ParameterValue("Continuous"), acquisition_mode_descriptor);
+  acquisition_rate_descriptor.description = "Sets the expected triggering rate in externally triggered mode.";
+  this->declare_parameter("acquisition_rate", rclcpp::ParameterValue(30), acquisition_rate_descriptor);
+  trigger_source_descriptor.description = "Camera trigger source";
+  this->declare_parameter("trigger_source", rclcpp::ParameterValue("FixedRate"), trigger_source_descriptor);
+  trigger_mode_descriptor.description = "Camera trigger mode";
+  this->declare_parameter("trigger_mode", rclcpp::ParameterValue("On"), trigger_mode_descriptor);
+  trigger_selector_descriptor.description = "Camera trigger selector";
+  this->declare_parameter("trigger_selector", rclcpp::ParameterValue("FrameStart"), trigger_selector_descriptor);
+  trigger_activation_descriptor.description = "Camera trigger activation";
+  this->declare_parameter("trigger_activation", rclcpp::ParameterValue("RisingEdge"), trigger_activation_descriptor);
+  trigger_delay_descriptor.description = "Trigger delay in us (only valid when set to external trigger)";
+  this->declare_parameter("trigger_delay", rclcpp::ParameterValue(0.0), trigger_delay_descriptor);
+  exposure_descriptor.description = "Camera exposure time in microseconds.";
+  this->declare_parameter("exposure", rclcpp::ParameterValue(50000), exposure_descriptor);
+  exposure_auto_descriptor.description = "Sets the camera exposure. If continously automatic, causes the `~exposure` setting to be ignored.";
+  this->declare_parameter("exposure_auto", rclcpp::ParameterValue("Continuous"), exposure_auto_descriptor);
+  exposure_auto_alg_descriptor.description = "The following algorithms can be used to calculate auto exposure";
+  this->declare_parameter("exposure_auto_alg", rclcpp::ParameterValue("FitRange"), exposure_auto_alg_descriptor);
+  exposure_auto_tol_descriptor.description = "Tolerance in variation from ExposureAutoTarget in which the auto exposure algorithm will not respond.";
+  this->declare_parameter("exposure_auto_tol", rclcpp::ParameterValue(5), exposure_auto_tol_descriptor);
+  exposure_auto_max_descriptor.description = "he max exposure time in auto exposure mode, in microseconds.";
+  this->declare_parameter("exposure_auto_max", rclcpp::ParameterValue(50000), exposure_auto_max_descriptor);
+  exposure_auto_min_descriptor.description = "The min exposure time in auto exposure mode, in microseconds.";
+  this->declare_parameter("exposure_auto_min", rclcpp::ParameterValue(41), exposure_auto_min_descriptor);
+  exposure_auto_outliers_descriptor.description = "The total pixels from top of the distribution that are ignored by the auto exposure algorithm (0.01% increments)";
+  this->declare_parameter("exposure_auto_outliers", rclcpp::ParameterValue(0), exposure_auto_outliers_descriptor);
+  exposure_auto_rate_descriptor.description = "The rate at which the auto exposure function changes the exposure setting.100% is auto exposure adjustments running at full speed, and 50% is half speed.";
+  this->declare_parameter("exposure_auto_rate", rclcpp::ParameterValue(100), exposure_auto_rate_descriptor);
+  exposure_auto_target_descriptor.description = "The auto exposure target mean value as a percentage, from 0=black to 100=white.";
+  this->declare_parameter("exposure_auto_target", rclcpp::ParameterValue(50), exposure_auto_target_descriptor);
+  gain_descriptor.description = "The gain level in dB.";
+  this->declare_parameter("gain", rclcpp::ParameterValue(0), gain_descriptor);
+  gain_auto_descriptor.description = "Sets the analog gain. If continously automatic, causes the `~gain` setting to be ignored.";
+  this->declare_parameter("gain_auto", rclcpp::ParameterValue("Continuous"), gain_auto_descriptor);
+  gain_auto_tol_descriptor.description = "Tolerance in variation from GainAutoTarget in which the auto exposure algorithm will not respond.";
+  this->declare_parameter("gain_auto_tol", rclcpp::ParameterValue(5), gain_auto_tol_descriptor);
+  gain_auto_max_descriptor.description = "The max gain level in auto gain mode, in dB.";
+  this->declare_parameter("gain_auto_max", rclcpp::ParameterValue(32), gain_auto_max_descriptor);
+  gain_auto_min_descriptor.description = "The min gain level in auto gain mode, in dB.";
+  this->declare_parameter("gain_auto_min", rclcpp::ParameterValue(0), gain_auto_min_descriptor);
+  gain_auto_outliers_descriptor.description = "The total pixels from top of the distribution that are ignored by the auto gain algorithm (0.01% increments).";
+  this->declare_parameter("gain_auto_outliers", rclcpp::ParameterValue(0), gain_auto_outliers_descriptor);
+  gain_auto_rate_descriptor.description = "The rate percentage at which the auto gain function changes.";
+  this->declare_parameter("gain_auto_rate", rclcpp::ParameterValue(100), gain_auto_rate_descriptor);
+  gain_auto_target_descriptor.description = "The general lightness or darkness of the auto gain feature. A percentage of maximum brightness.";
+  this->declare_parameter("gain_auto_target", rclcpp::ParameterValue(50), gain_auto_target_descriptor);
+  balance_ratio_abs_descriptor.description = "Adjusts the gain of the channel selected in the `~BalanceRatioSelector`";
+  this->declare_parameter("balance_ratio_abs", rclcpp::ParameterValue(1.0), balance_ratio_abs_descriptor);
+  balance_ratio_selector_descriptor.description = "Select the Red or Blue channel to adjust with `~BalanceRatioAbs`";
+  this->declare_parameter("balance_ratio_selector", rclcpp::ParameterValue("Red"), balance_ratio_selector_descriptor);
+  whitebalance_auto_descriptor.description = "Whether whitebalance will continuously adjust to the current scene. Causes the `~whitebalance_red` and `~whitebalance_blue` settings to be ignored.";
+  this->declare_parameter("whitebalance_auto", rclcpp::ParameterValue("Continuous"), whitebalance_auto_descriptor);
+  whitebalance_auto_tol_descriptor.description = "Tolerance allowed from the ideal white balance values";
+  this->declare_parameter("whitebalance_auto_tol", rclcpp::ParameterValue(5), whitebalance_auto_tol_descriptor);
+  whitebalance_auto_rate_descriptor.description = "Rate of white balance adjustments, from 1 (slowest) to 100 (fastest).";
+  this->declare_parameter("whitebalance_auto_rate", rclcpp::ParameterValue(100), whitebalance_auto_rate_descriptor);
+  binning_x_descriptor.description = "Number of pixels to bin together horizontally.";
+  this->declare_parameter("binning_x", rclcpp::ParameterValue(1), binning_x_descriptor);
+  binning_y_descriptor.description = "Number of pixels to bin together vertically.";
+  this->declare_parameter("binning_y", rclcpp::ParameterValue(1), binning_y_descriptor);
+  decimation_x_descriptor.description = "Number of decimation operations in x.";
+  this->declare_parameter("decimation_x", rclcpp::ParameterValue(1), decimation_x_descriptor);
+  decimation_y_descriptor.description = "Number of decimation operations in y.";
+  this->declare_parameter("decimation_y", rclcpp::ParameterValue(1), decimation_y_descriptor);
+  width_descriptor.description = "Width of the region of interest (0 for automatic).";
+  this->declare_parameter("width", rclcpp::ParameterValue(4096), width_descriptor);
+  height_descriptor.description = "Height of the region of interest (0 for automatic).";
+  this->declare_parameter("height", rclcpp::ParameterValue(4096), height_descriptor);
+  roi_width_descriptor.description = "X width of the region of interest.";
+  this->declare_parameter("roi_width", rclcpp::ParameterValue(0), roi_width_descriptor);
+  roi_height_descriptor.description = "Y height of the region of interest.";
+  this->declare_parameter("roi_height", rclcpp::ParameterValue(0), roi_height_descriptor);
+  roi_offset_x_descriptor.description = "X offset of the region of interest.";
+  this->declare_parameter("roi_offset_x", rclcpp::ParameterValue(0), roi_offset_x_descriptor);
+  roi_offset_y_descriptor.description = "Y offset of the region of interest.";
+  this->declare_parameter("roi_offset_y", rclcpp::ParameterValue(0), roi_offset_y_descriptor);
+  pixel_format_descriptor.description = "Format of the image data.";
+  this->declare_parameter("pixel_format", rclcpp::ParameterValue("Mono8"), pixel_format_descriptor);
+  stream_bytes_per_second_descriptor.description = "Limits the data rate of the camera.";
+  this->declare_parameter("stream_bytes_per_second", rclcpp::ParameterValue(45000000), stream_bytes_per_second_descriptor);
+  ptp_mode_descriptor.description = "Controls the PTP behavior of the clock port.";
+  this->declare_parameter("ptp_mode", rclcpp::ParameterValue("Off"), ptp_mode_descriptor);
+  sync_in_selector_descriptor.description = "Selects the sync-out line to control";
+  this->declare_parameter("sync_in_selector", rclcpp::ParameterValue("SyncIn1"), sync_in_selector_descriptor);
+  sync_out_polarity_descriptor.description = "Polarity applied to the sync-out line specified by `sync_out_selector`";
+  this->declare_parameter("sync_out_polarity", rclcpp::ParameterValue("Normal"), sync_out_polarity_descriptor);
+  sync_out_selector_descriptor.description = "Selects the sync-out line to control";
+  this->declare_parameter("sync_out_selector", rclcpp::ParameterValue("SyncOut1"), sync_out_selector_descriptor);
+  sync_out_source_descriptor.description = "Signal source of the sync-out line specified by `sync_out_selector`";
+  this->declare_parameter("sync_out_source", rclcpp::ParameterValue("GPO"), sync_out_source_descriptor);
+  iris_auto_target_descriptor.description = "This is the target image mean value, in percent.";
+  this->declare_parameter("iris_auto_target", rclcpp::ParameterValue(50), iris_auto_target_descriptor);
+  iris_mode_descriptor.description = "Set the iris mode. Disabled: no iris control. Video: enable video iris. VideoOpen: fully open a video iris. VideoClose: fully close a video iris.";
+  this->declare_parameter("iris_mode", rclcpp::ParameterValue("Continuous"), iris_mode_descriptor);
+  iris_video_level_min_descriptor.description = "Minimum video iris level output by the camera, in approximately mV pp. A higher minimum value slows the adjustment time but prevents excessive overshoot.";
+  this->declare_parameter("iris_video_level_min", rclcpp::ParameterValue(110), iris_video_level_min_descriptor);
+  iris_video_level_max_descriptor.description = "Maximum video iris level output by the camera, in approximately mV pp. A lower minimum value slows the adjustment time but prevents excessive overshoot.";
+  this->declare_parameter("iris_video_level_max", rclcpp::ParameterValue(110), iris_video_level_max_descriptor);
+  // callback for parms
+  // this->set_on_parameters_set_callback(
+  //   std::bind(&BaseMonoCamera::parametersCallback, this, std::placeholders::_1)
+  // );
 
-    // create an image publisher w/QoS profile
-    rmw_qos_profile_t custom_qos_profile = rmw_qos_profile_sensor_data;
-    custom_qos_profile.depth = 6;  // TEST
-    camera_info_pub_ = image_transport::create_camera_publisher(this, "image", custom_qos_profile);
-    info_man_ = std::make_shared<camera_info_manager::CameraInfoManager>(this);
-    last_frame_ = std::chrono::steady_clock::now();
+  paramsCbHandle_ = this->add_on_set_parameters_callback(std::bind(&BaseMonoCamera::parametersCallback, this, std::placeholders::_1));
 
-  // Set the frame callback
-  cam_.setCallback(std::bind(&avt_vimba_camera::MonoCamera::frameCallback, this, std::placeholders::_1));
+  info_man_ = std::make_shared<camera_info_manager::CameraInfoManager>(this);
+  last_frame_ = std::chrono::steady_clock::now();
 
   /* [neil-rti] FIXME: I'm not yet certain of the right way to get preloaded-from-yaml
    * parms into the camera configuration at startup.  The call below will fail if the
    * yaml file isn't used or doesn't line up perfectly.
    */
-    parametersCallback(this->get_parameters({
-      "height", "width", "camera_ip_addr", "acquisition_mode", "acquisition_rate", "balance_ratio_abs", 
-      "balance_ratio_selector", "binning_x", "binning_y", "decimation_x", "decimation_y", 
-      "exposure", "exposure_auto", "exposure_auto_alg", "exposure_auto_max", "exposure_auto_min", 
-      "exposure_auto_outliers", "exposure_auto_rate", "exposure_auto_target", "exposure_auto_tol", 
-      "frame_id", "gain", "gain_auto", "gain_auto_max", "gain_auto_min", "gain_auto_outliers", 
-      "gain_auto_rate", "gain_auto_target", "gain_auto_tol", "iris_auto_target", "iris_mode", 
-      "iris_video_level_max", "iris_video_level_min", "pixel_format", "ptp_mode", "roi_height", 
-      "roi_offset_x", "roi_offset_y", "roi_width", "stream_bytes_per_second", "sync_in_selector", 
-      "sync_out_polarity", "sync_out_selector", "sync_out_source", "trig_timestamp_topic", 
-      "trigger_activation", "trigger_delay", "trigger_mode", "trigger_selector", "trigger_source", 
-      "use_sim_time", "whitebalance_auto", "whitebalance_auto_rate", "whitebalance_auto_tol"
-    }));
+  parametersCallback(this->get_parameters({
+    "height", "width", "camera_ip_addr", "acquisition_mode", "acquisition_rate", "balance_ratio_abs", 
+    "balance_ratio_selector", "binning_x", "binning_y", "decimation_x", "decimation_y", 
+    "exposure", "exposure_auto", "exposure_auto_alg", "exposure_auto_max", "exposure_auto_min", 
+    "exposure_auto_outliers", "exposure_auto_rate", "exposure_auto_target", "exposure_auto_tol", 
+    "frame_id", "gain", "gain_auto", "gain_auto_max", "gain_auto_min", "gain_auto_outliers", 
+    "gain_auto_rate", "gain_auto_target", "gain_auto_tol", "iris_auto_target", "iris_mode", 
+    "iris_video_level_max", "iris_video_level_min", "pixel_format", "ptp_mode", "roi_height", 
+    "roi_offset_x", "roi_offset_y", "roi_width", "stream_bytes_per_second", "sync_in_selector", 
+    "sync_out_polarity", "sync_out_selector", "sync_out_source", "trig_timestamp_topic", 
+    "trigger_activation", "trigger_delay", "trigger_mode", "trigger_selector", "trigger_source", 
+    "use_sim_time", "whitebalance_auto", "whitebalance_auto_rate", "whitebalance_auto_tol"
+  }));
 
-  // Start dynamic_reconfigure & run configure()
-  //ros1 reconfigure_server_.setCallback(boost::bind(&avt_vimba_camera::MonoCamera::configure, this, _1, _2));
-  configure(camera_config_, 0);
-
+  // Set the frame callback
+  cam_.setCallback(std::bind(&avt_vimba_camera::BaseMonoCamera::frameCallback, this, std::placeholders::_1));
 }
 
-MonoCamera::~MonoCamera(void) {
+BaseMonoCamera::~BaseMonoCamera(void) {
   api_.shutdown();
   //ros1 pub_.shutdown();
 }
@@ -203,7 +196,7 @@ MonoCamera::~MonoCamera(void) {
  * Callback function for parameter settings from other apps, such
  * as 'ros2 param set <node_name> <parm_name> <new_value>'
  **/
-rcl_interfaces::msg::SetParametersResult MonoCamera::parametersCallback (
+rcl_interfaces::msg::SetParametersResult BaseMonoCamera::parametersCallback (
   const std::vector<rclcpp::Parameter> &parameters)
 {
   rcl_interfaces::msg::SetParametersResult result;
@@ -536,23 +529,6 @@ rcl_interfaces::msg::SetParametersResult MonoCamera::parametersCallback (
   return result;
 }
 
-void MonoCamera::frameCallback(const FramePtr& vimba_frame_ptr) {
-  rclcpp::Time ros_time = ros_clock_.now();
-
-  if (camera_info_pub_.getNumSubscribers() > 0) {
-    sensor_msgs::msg::Image img;
-    if (api_.frameToImage(vimba_frame_ptr, img)) {
-      sensor_msgs::msg::CameraInfo ci = info_man_->getCameraInfo();
-      ci.header.stamp = img.header.stamp = ros_time;
-      img.header.frame_id = ci.header.frame_id;
-      camera_info_pub_.publish(img, ci);
-    } else {
-      RCLCPP_WARN(this->get_logger(), "Function frameToImage returned 0. No image published.");
-    }
-  }
-  // updater_.update();
-}
-
 /** Dynamic reconfigure callback
 *
 *  Called immediately when callback first defined. Called again
@@ -562,7 +538,8 @@ void MonoCamera::frameCallback(const FramePtr& vimba_frame_ptr) {
 *  @param level bit-wise OR of reconfiguration levels for all
 *               changed parameters (0xffffffff on initial call)
 **/
-void MonoCamera::configure(Config& newconfig, uint32_t level) {
+void BaseMonoCamera::configure(Config& newconfig, uint32_t level) {
+  (void)level;
   try {
     // resolve frame ID using tf_prefix parameter
     if (newconfig.frame_id_ == "") {
@@ -588,7 +565,7 @@ void MonoCamera::configure(Config& newconfig, uint32_t level) {
   }
 }
 
-void MonoCamera::updateCameraInfo(const avt_vimba_camera::AvtVimbaCameraConfig& config) {
+void BaseMonoCamera::updateCameraInfo(const avt_vimba_camera::AvtVimbaCameraConfig& config) {
 
   // Get camera_info from the manager
   sensor_msgs::msg::CameraInfo ci = info_man_->getCameraInfo();
@@ -625,14 +602,41 @@ void MonoCamera::updateCameraInfo(const avt_vimba_camera::AvtVimbaCameraConfig& 
     }
   }
 
-  bool roiMatchesCalibration = (ci.height == config.roi_height
-                              && ci.width == config.roi_width);
-  bool resolutionMatchesCalibration = (ci.width == config.width
-                                   && ci.height == config.height);
+  bool roiMatchesCalibration = (ci.height == static_cast<uint32_t>(config.roi_height)
+                              && ci.width == static_cast<uint32_t>(config.roi_width));
+  bool resolutionMatchesCalibration = (ci.width == static_cast<uint32_t>(config.width)
+                                   && ci.height == static_cast<uint32_t>(config.height));
   // check
   ci.roi.do_rectify = roiMatchesCalibration || resolutionMatchesCalibration;
 
   // push the changes to manager
   info_man_->setCameraInfo(ci);
 }
+
+
+void
+MonoCamera::createPublisher() {
+  // create an image publisher w/QoS profile
+  rmw_qos_profile_t custom_qos_profile = rmw_qos_profile_sensor_data;
+  custom_qos_profile.depth = 6;  // TEST
+  camera_info_pub_ = image_transport::create_camera_publisher(this, "image", custom_qos_profile);
 }
+
+void
+MonoCamera::frameCallback(const FramePtr& vimba_frame_ptr) {
+  rclcpp::Time ros_time = ros_clock_.now();
+
+  if (camera_info_pub_.getNumSubscribers() > 0) {
+    sensor_msgs::msg::Image img;
+    if (api_.frameToImage(vimba_frame_ptr, img)) {
+      sensor_msgs::msg::CameraInfo ci = info_man_->getCameraInfo();
+      ci.header.stamp = img.header.stamp = ros_time;
+      img.header.frame_id = ci.header.frame_id;
+      camera_info_pub_.publish(img, ci);
+    } else {
+      RCLCPP_WARN(this->get_logger(), "Function frameToImage returned 0. No image published.");
+    }
+  }
+}
+
+}  // namespace avt_vimba_camera

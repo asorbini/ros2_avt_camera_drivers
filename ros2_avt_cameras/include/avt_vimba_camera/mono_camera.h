@@ -37,14 +37,14 @@
 
 namespace avt_vimba_camera 
 {
-class MonoCamera : public rclcpp::Node {
+class BaseMonoCamera : public rclcpp::Node {
 public:
-    explicit MonoCamera(const std::string & node_name, const rclcpp::NodeOptions&);
-    ~MonoCamera();
+    explicit BaseMonoCamera(const std::string & node_name, const rclcpp::NodeOptions&);
+    virtual ~BaseMonoCamera();
 
     rclcpp::Node::SharedPtr node_handle_;
 
-private:
+protected:
     AvtVimbaApi api_;
     AvtVimbaCamera cam_;
 
@@ -115,16 +115,33 @@ private:
     rclcpp::TimerBase::SharedPtr timer_;
     std::chrono::steady_clock::time_point last_frame_;
     std::shared_ptr<camera_info_manager::CameraInfoManager> info_man_;
-    image_transport::CameraPublisher camera_info_pub_;
     // std::shared_ptr<sensor_msgs::msg::Image> image_msg_;
     rclcpp::Clock ros_clock_;
 	
     rcl_interfaces::msg::SetParametersResult parametersCallback (const std::vector<rclcpp::Parameter> &parameters);
+    OnSetParametersCallbackHandle::SharedPtr paramsCbHandle_;
 
     void ImageCallback();
-    void frameCallback(const FramePtr& vimba_frame_ptr);
     void configure(Config& newconfig, uint32_t level);
     void updateCameraInfo(const Config& config);
+
+    virtual void frameCallback(const FramePtr& vimba_frame_ptr) = 0;
+};
+
+class MonoCamera : public BaseMonoCamera {
+public:
+  explicit MonoCamera(const std::string & node_name, const rclcpp::NodeOptions& opts)
+  : BaseMonoCamera(node_name, opts)
+  {
+    createPublisher();
+    configure(camera_config_, 0);
+  }
+  virtual ~MonoCamera() {}
+protected:
+  virtual void frameCallback(const FramePtr& vimba_frame_ptr);
+  virtual void createPublisher();
+
+  image_transport::CameraPublisher camera_info_pub_;
 };
 }
 #endif  // __MONO_CAMERA_H__
