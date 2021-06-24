@@ -33,7 +33,7 @@
 #include <avt_vimba_camera/frame_observer.h>
 #include <iostream>
 
-FrameObserver::FrameObserver(CameraPtr cam_ptr, Callback callback) : IFrameObserver( cam_ptr ), callback_(callback), cam_ptr_(cam_ptr)
+FrameObserver::FrameObserver(CameraPtr cam_ptr, Callback callback) : IFrameObserver( cam_ptr ), cam_ptr_(cam_ptr), callback_(callback)
 {
   // Nothing
 }
