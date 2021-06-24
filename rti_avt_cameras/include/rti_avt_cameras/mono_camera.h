@@ -34,6 +34,7 @@
 #define RTI__MONO_CAMERA_H__
 
 #include <avt_vimba_camera/mono_camera.h>
+#include <rti_avt_cameras/rti_image_helpers.hpp>
 
 namespace rti_avt_cameras
 {
@@ -49,6 +50,13 @@ public:
 protected:
   virtual void frameCallback(const FramePtr& vimba_frame_ptr);
   virtual void createPublisher();
+  virtual std::string getCameraInfoTopic(const std::string & base_topic);
+
+  dds::pub::Publisher publisher_{nullptr};
+  dds::topic::Topic<ros2::flat_zc::sensor_msgs::msg::Image> topic_image_{nullptr};
+  dds::pub::DataWriter<ros2::flat_zc::sensor_msgs::msg::Image> writer_image_{nullptr};
+  dds::topic::Topic<ros2::flat_zc::sensor_msgs::msg::CameraInfo> topic_info_{nullptr};
+  dds::pub::DataWriter<ros2::flat_zc::sensor_msgs::msg::CameraInfo> writer_info_{nullptr};
 };
 }
 #endif  // RTI__MONO_CAMERA_H__
