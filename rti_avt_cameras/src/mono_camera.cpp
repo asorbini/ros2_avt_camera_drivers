@@ -30,53 +30,22 @@
 /// (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
 /// THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include <rti_avt_cameras/mono_camera.h>
-#include <rclcpp/expand_topic_or_service_name.hpp>
-#include <rcl/node.h>
+#include "rti_avt_cameras/mono_camera.h"
+#include "rclcpp/expand_topic_or_service_name.hpp"
+#include "rcl/node.h"
+#include "ros2dds/ros2dds.hpp"
 
 namespace rti_avt_cameras {
 
 void
 MonoCamera::createPublisher() {
-  size_t domain_id = 0;
-  auto rcl_node = this->get_node_base_interface()->get_rcl_node_handle();
-  if (RCL_RET_OK != rcl_node_get_domain_id(rcl_node, &domain_id))
-  {
-    throw new std::runtime_error("failed to retrieve DDS domain ID");
-  }
+  using ros2::flat_zc::sensor_msgs::msg::Image;
+  using ros2::flat_zc::sensor_msgs::msg::CameraInfo;
 
-  // Look up participant and create a Publisher and DataWriter.
-  auto participant = dds::domain::DomainParticipant(domain_id);
-  // Customize PublisherQos so that the DataWriter is created disabled.
-  auto publisher_qos =  participant->default_publisher_qos();
-  dds::core::policy::EntityFactory entity_policy;
-  entity_policy.autoenable_created_entities(false);
-  publisher_qos << entity_policy;
-  publisher_ = dds::pub::Publisher(participant, publisher_qos);
+  writer_image_ = ros2dds::create_datawriter<Image>(*this, "image");
 
-  std::string topic_name_image = rclcpp::expand_topic_or_service_name("image",
-      this->get_name(), this->get_namespace());
-  topic_image_ = dds::topic::Topic<ros2::flat_zc::sensor_msgs::msg::Image>(
-    participant, topic_name_image);
-  std::string topic_name_info = getCameraInfoTopic(topic_name_image);
-  topic_info_ = dds::topic::Topic<ros2::flat_zc::sensor_msgs::msg::CameraInfo>(
-    participant, topic_name_info);
-
-  // The QoS used by this DataWriter can be configured via XML by 
-  // adding a <datawriter_qos> element with an appropriate `topic_filter`
-  // to the default QoS Profile.
-  auto qos_provider = dds::core::QosProvider::Default();
-  auto writer_qos = qos_provider.delegate()->datawriter_qos_w_topic_name(topic_name_image);
-  writer_image_ = dds::pub::DataWriter<ros2::flat_zc::sensor_msgs::msg::Image>(
-    publisher_, topic_image_, writer_qos);
-  
-  writer_qos = qos_provider.delegate()->datawriter_qos_w_topic_name(topic_name_info);
-  writer_info_ = dds::pub::DataWriter<ros2::flat_zc::sensor_msgs::msg::CameraInfo>(
-    publisher_, topic_info_, writer_qos);
-  
-  publisher_->enable();
-  writer_info_->enable();
-  writer_image_->enable();
+  std::string topic_name_info = getCameraInfoTopic(writer_image_.topic().name().c_str());
+  writer_info_ = ros2dds::create_datawriter<CameraInfo>(*this, topic_name_info.c_str());
 }
 
 static std::vector<std::string> split(std::string input,

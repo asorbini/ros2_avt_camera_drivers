@@ -19,6 +19,7 @@ endif()
 find_package(ament_cmake REQUIRED)
 find_package(ros2_avt_cameras REQUIRED)
 find_package(connext_msgs REQUIRED)
+find_package(ros2dds REQUIRED)
 
 set(${PROJECT_NAME}_DDS_TYPES
   sensor_msgs/msg/Image
@@ -46,7 +47,9 @@ target_include_directories(mono_camera_node
 )
 target_link_libraries(mono_camera_node ${PROJECT_NAME}_ddstypes)
 ament_target_dependencies(mono_camera_node
-  ros2_avt_cameras)
+  ros2_avt_cameras
+  ros2dds
+)
 install(TARGETS mono_camera_node
   ARCHIVE DESTINATION lib
   LIBRARY DESTINATION lib

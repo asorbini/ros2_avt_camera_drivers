@@ -11,6 +11,7 @@
 
   <depend>ros2_avt_cameras</depend>
   <depend>connext_msgs</depend>
+  <depend>ros2dds</depend>
 
   <test_depend>ament_lint_auto</test_depend>
   <test_depend>ament_lint_common</test_depend>

@@ -52,10 +52,7 @@ protected:
   virtual void createPublisher();
   virtual std::string getCameraInfoTopic(const std::string & base_topic);
 
-  dds::pub::Publisher publisher_{nullptr};
-  dds::topic::Topic<ros2::flat_zc::sensor_msgs::msg::Image> topic_image_{nullptr};
   dds::pub::DataWriter<ros2::flat_zc::sensor_msgs::msg::Image> writer_image_{nullptr};
-  dds::topic::Topic<ros2::flat_zc::sensor_msgs::msg::CameraInfo> topic_info_{nullptr};
   dds::pub::DataWriter<ros2::flat_zc::sensor_msgs::msg::CameraInfo> writer_info_{nullptr};
 };
 }
